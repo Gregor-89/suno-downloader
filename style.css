@@ -215,16 +215,23 @@ body {
 
 .input-container {
   display: flex;
-  gap: 12px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.input-field-wrapper {
+  flex: 1;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {
-  flex: 1;
+  width: 100%;
   background: rgba(10, 12, 20, 0.8);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 16px 20px;
+  padding: 16px 110px 16px 20px;
   font-size: 1rem;
   color: var(--text-primary);
   outline: none;
@@ -243,26 +250,30 @@ body {
 
 .btn-paste {
   position: absolute;
-  right: 185px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: rgba(255, 255, 255, 0.08);
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: var(--radius-sm);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 6px;
   transition: var(--transition);
+  z-index: 2;
+  white-space: nowrap;
 }
 
 .btn-paste:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.2);
+}
 }
 
 .btn-primary {
@@ -922,12 +933,6 @@ body {
 
   .input-container {
     flex-direction: column;
-  }
-
-  .btn-paste {
-    position: static;
-    transform: none;
-    align-self: flex-start;
   }
 
   .btn-primary {

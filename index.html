@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Suno Downloader | Uniwersalny Pobieracz Piosenek</title>
   <meta name="description" content="Pobieraj swoje utwory z Suno.com bez limitów konta. Wsparcie dla formatów MP3 (z tagami ID3 i okładką), oryginalnego M4A oraz grafik HD.">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -48,18 +50,20 @@
     <section class="search-card">
       <form id="searchForm">
         <div class="input-container">
-          <input 
-            type="text" 
-            id="urlInput" 
-            class="search-input" 
-            placeholder="Wklej link np. https://suno.com/s/... lub https://suno.com/song/..." 
-            autocomplete="off"
-            required
-          >
-          <button type="button" id="btnPaste" class="btn-paste" title="Wklej ze schowka">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-            Wklej
-          </button>
+          <div class="input-field-wrapper">
+            <input 
+              type="text" 
+              id="urlInput" 
+              class="search-input" 
+              placeholder="Wklej link np. https://suno.com/s/... lub https://suno.com/song/..." 
+              autocomplete="off"
+              required
+            >
+            <button type="button" id="btnPaste" class="btn-paste" title="Wklej ze schowka">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
+              <span>Wklej</span>
+            </button>
+          </div>
           <button type="submit" id="btnSubmit" class="btn-primary">
             <span>Zbadaj utwór</span>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>

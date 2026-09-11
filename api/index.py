@@ -15,6 +15,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, HEAD")
         self.send_header("Access-Control-Allow-Headers", "*")
         self.send_header("Access-Control-Expose-Headers", "Content-Range, Accept-Ranges, Content-Length, Content-Type")
+        self.send_header("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet")
         super().end_headers()
 
     def do_OPTIONS(self):
