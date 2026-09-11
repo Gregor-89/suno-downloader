@@ -89,7 +89,7 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// Pobierz skonfigurowany adres backendu (domyślnie pusty dla localhost/Vercel)
+// Pobierz skonfigurowany adres backendu (domyślnie pusty dla localhost, Render, Vercel itp.)
 function getApiBaseUrl() {
   const urlParams = new URLSearchParams(window.location.search);
   const paramBackend = urlParams.get('backend');
@@ -100,13 +100,13 @@ function getApiBaseUrl() {
   const saved = localStorage.getItem('suno_custom_backend');
   if (saved) return saved;
 
-  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocalHost) return '';
-  
-  // Jeśli to domena Vercel
-  if (window.location.hostname.includes('vercel.app')) return '';
+  // Jedynie domena github.io jest czysto statyczna bez własnego backendu
+  if (window.location.hostname.includes('github.io')) {
+    return null;
+  }
 
-  return null;
+  // Każdy inny host (localhost, onrender.com, vercel.app, tunel itp.) jest pełnym backendem!
+  return '';
 }
 
 // Sprawdź status serwera (lokalny, Vercel lub zdalny)
