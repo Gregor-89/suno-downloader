@@ -224,6 +224,7 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .search-input {
@@ -273,7 +274,6 @@ body {
   background: rgba(255, 255, 255, 0.16);
   color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.2);
-}
 }
 
 .btn-primary {
