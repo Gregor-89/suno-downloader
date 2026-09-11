@@ -100,16 +100,22 @@ def resolve_suno_song(url_or_id):
 
     # Tekst / Prompt
     lyrics = ""
-    prompt_chunks = re.findall(r"\d+:T[0-9a-f]+,(.+?)(?=\n\d+:|\Z)", html, re.DOTALL)
-    for chunk in prompt_chunks:
-        if any(marker in chunk for marker in ["[Verse", "[Chorus", "[Intro", "[Outro", "[Bridge", "[Immediate"]):
-            lyrics = chunk.encode().decode("unicode_escape", errors="ignore").strip()
-            break
+    prompt_match = re.search(r":T[0-9a-f]+,(.+?)(?=\d+:\[|\d+:\"|\d+:\{|\d+:null|\Z)", html, re.DOTALL)
+    if prompt_match:
+        raw_text = prompt_match.group(1).strip()
+        if any(marker in raw_text for marker in ["[Verse", "[Chorus", "[Intro", "[Outro", "[Bridge", "[Immediate"]):
+            try:
+                lyrics = raw_text.encode().decode("unicode_escape", errors="ignore").strip()
+            except Exception:
+                lyrics = raw_text
             
     if not lyrics:
         prompt_m = re.search(r"\\\"prompt\\\":\\\"(.*?)\\\"", html)
         if prompt_m:
-            lyrics = prompt_m.group(1).encode().decode("unicode_escape", errors="ignore").strip()
+            try:
+                lyrics = prompt_m.group(1).encode().decode("unicode_escape", errors="ignore").strip()
+            except Exception:
+                lyrics = prompt_m.group(1)
 
     result = {
         "success": True,
