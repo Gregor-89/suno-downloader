@@ -23,7 +23,7 @@ import hashlib
 import webbrowser
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-PORT = 8989
+PORT = int(os.environ.get("PORT", 8989))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 # Pamięć podręczna na odszyfrowane utwory (unikanie ponownego pobierania przy seekowaniu)
