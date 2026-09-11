@@ -89,32 +89,53 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// Sprawdź status serwera lokalnego
-async function checkServerConnection() {
+// Pobierz skonfigurowany adres backendu (domyślnie pusty dla localhost/Vercel)
+function getApiBaseUrl() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const paramBackend = urlParams.get('backend');
+  if (paramBackend) {
+    localStorage.setItem('suno_custom_backend', paramBackend.replace(/\/$/, ''));
+    return paramBackend.replace(/\/$/, '');
+  }
+  const saved = localStorage.getItem('suno_custom_backend');
+  if (saved) return saved;
+
   const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalHost) return '';
   
-  if (isLocalHost) {
+  // Jeśli to domena Vercel
+  if (window.location.hostname.includes('vercel.app')) return '';
+
+  return null;
+}
+
+// Sprawdź status serwera (lokalny, Vercel lub zdalny)
+async function checkServerConnection() {
+  const apiBase = getApiBaseUrl();
+
+  if (apiBase !== null) {
     try {
-      const res = await fetch('/api/ping');
+      const res = await fetch(`${apiBase}/api/ping`, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         isLocalServer = true;
         serverStatusPill.className = 'server-status-pill online';
-        statusText.textContent = 'Lokalny Silnik DRM (Aktywny)';
+        const isCloud = window.location.hostname.includes('vercel.app') || (apiBase && apiBase.startsWith('http'));
+        statusText.textContent = isCloud ? 'Silnik Chmurowy (Aktywny)' : 'Lokalny Silnik DRM (Aktywny)';
         modeNotice.style.background = 'rgba(16, 185, 129, 0.1)';
         modeNotice.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-        modeNoticeText.innerHTML = '🟢 <b>Tryb Lokalny Aktywny:</b> Pełne wsparcie dla deszyfrowania strumieni audio Suno Mango DRM, odsłuchiwania w przeglądarce i konwersji do MP3.';
+        modeNoticeText.innerHTML = `🟢 <b>Tryb Pełny Aktywny:</b> Deszyfrowanie Mango DRM, odtwarzanie w przeglądarce i konwersja MP3 działają w 100%!`;
         return;
       }
     } catch (e) {}
   }
 
-  // Jeśli strona jest na GitHub Pages
+  // Jeśli strona jest na GitHub Pages bez skonfigurowanego backendu
   isLocalServer = false;
   serverStatusPill.className = 'server-status-pill offline';
-  statusText.textContent = 'Tryb Online (Podgląd)';
+  statusText.textContent = 'Tryb Online (Wymaga Backend)';
   modeNotice.style.background = 'rgba(245, 158, 11, 0.1)';
   modeNotice.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-  modeNoticeText.innerHTML = '⚠️ <b>Uwaga:</b> Suno wprowadziło szyfrowanie strumieni Mango DRM (AES-CTR). Aby bez problemu odsłuchiwać i pobierać pełne pliki audio MP3/M4A, <b>uruchom skrót Suno Downloader na Pulpicie</b> (<a href="http://localhost:8989" style="color:#f59e0b; text-decoration:underline;">http://localhost:8989</a>). Wersja GitHub Pages pozwala na pobieranie okładek i przeglądanie metadanych.';
+  modeNoticeText.innerHTML = '⚠️ <b>Uwaga:</b> Nowe pliki Suno są szyfrowane (Mango DRM). Aby pobierać poza domem bez VPS: wdróż to repozytorium <b>w 1 kliknięcie na darmowym Vercel.com</b> (instrukcja w <a href="https://github.com/Gregor-89/suno-downloader#readme" target="_blank" style="color:#f59e0b; text-decoration:underline;">README</a>) lub uruchom lokalnie z Pulpitu!';
 }
 
 function setupEventListeners() {
@@ -217,12 +238,13 @@ async function processUrl(input) {
     let track = null;
 
     if (isLocalServer) {
-      const resp = await fetch(`/api/resolve?url=${encodeURIComponent(input)}`);
+      const apiBase = getApiBaseUrl() ?? '';
+      const resp = await fetch(`${apiBase}/api/resolve?url=${encodeURIComponent(input)}`);
       const data = await resp.json();
       if (data.success) {
         track = data;
       } else {
-        throw new Error(data.error || 'Błąd serwera lokalnego');
+        throw new Error(data.error || 'Błąd serwera');
       }
     } else {
       track = await resolveInWebMode(input);
@@ -319,7 +341,8 @@ function displayTrack(track) {
   }
 
   // Ustawienie źródła audio
-  const audioSource = isLocalServer ? `/api/stream?uuid=${track.uuid}` : track.audio_url;
+  const apiBase = getApiBaseUrl() ?? '';
+  const audioSource = isLocalServer ? `${apiBase}/api/stream?uuid=${track.uuid}` : track.audio_url;
   audioElement.src = audioSource;
   audioElement.load();
   playIcon.style.display = 'block';
@@ -369,8 +392,9 @@ async function downloadOriginalM4a() {
   if (!currentTrack) return;
   
   if (isLocalServer) {
-    // Bezpośrednie pobranie odszyfrowanego pliku z serwera lokalnego
-    window.location.href = `/api/download?uuid=${currentTrack.uuid}`;
+    // Bezpośrednie pobranie odszyfrowanego pliku z serwera lokalnego lub chmurowego
+    const apiBase = getApiBaseUrl() ?? '';
+    window.location.href = `${apiBase}/api/download?uuid=${currentTrack.uuid}`;
     showToast('Pobieranie odszyfrowanego strumienia M4A...');
     return;
   }
@@ -415,7 +439,8 @@ async function downloadAsMp3() {
   setEncodingProgress(5, 'Pobieranie odszyfrowanego strumienia audio...');
 
   try {
-    const audioUrl = `/api/stream?uuid=${currentTrack.uuid}`;
+    const apiBase = getApiBaseUrl() ?? '';
+    const audioUrl = `${apiBase}/api/stream?uuid=${currentTrack.uuid}`;
     const audioResp = await fetch(audioUrl);
     const audioArrayBuffer = await audioResp.arrayBuffer();
 

@@ -38,10 +38,29 @@ Projekt jest w 100% przygotowany do działania na GitHub Pages:
 
 ---
 
+## ☁️ Dostęp Zdalny i Mobilny (Poza Domem - Bez VPS i za 0 zł!)
+
+Nowe strumienie Suno chronione są szyfrowaniem **Mango DRM (AES-CTR)**. Ponieważ GitHub Pages to wyłącznie statyczny hosting (bez kodu backendowego), istnieją **dwa darmowe sposoby korzystania z portalu poza domem**:
+
+### Opcja A: Wdrożenie na Vercel (1 kliknięcie, 100% w Chmurze)
+Repozytorium posiada gotowe pliki serverless (`api/index.py`, `vercel.json`):
+1. Wejdź na darmowy [vercel.com](https://vercel.com) i zaloguj się kontem GitHub.
+2. Kliknij **Add New...** -> **Project** i wybierz `Gregor-89/suno-downloader`.
+3. Kliknij **Deploy**.
+4. Gotowe! Otrzymasz stały, bezpieczny adres HTTPS (np. `https://suno-downloader-twojanazwa.vercel.app`), z którego możesz pobierać i odsłuchiwać utwory na telefonie w podróży.
+
+### Opcja B: 1-Kliknięcie na Pulpicie (Cloudflare Tunnel z PC)
+Jeśli Twój komputer w domu jest włączony:
+1. Kliknij na Pulpicie skrót: **`Suno Downloader (Dostęp Zdalny / Telefon)`** (lub uruchom `./start_remote_tunnel.sh`).
+2. W oknie terminala pojawi się unikalny link HTTPS (np. `https://twoj-adres.trycloudflare.com`).
+3. Otwórz ten link na telefonie lub prześlij sobie smsem/mailem — uzyskasz natychmiastowy dostęp do pełnego deszyfrowania i pobierania bez konfigurowania routera!
+
+---
+
 ## 🖥️ Uruchomienie Lokalne (Linux)
 
 ### 1. Skrót na Pulpicie
-Na Twoim pulpicie znajduje się plik `Suno Downloader.desktop`. Wystarczy kliknąć dwukrotnie, aby serwer wystartował w tle i otworzył aplikację w domyślnej przeglądarce.
+Na Twoim pulpicie znajduje się plik **`Suno Downloader`**. Wystarczy kliknąć dwukrotnie, aby serwer wystartował w tle i otworzył aplikację pod adresem `http://localhost:8989`.
 
 ### 2. Z linii poleceń
 ```bash

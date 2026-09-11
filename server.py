@@ -99,23 +99,24 @@ def resolve_suno_song(url_or_id):
         tags = tags_m.group(1).replace("\\n", " ").strip()
 
     # Tekst / Prompt
+    def clean_lyrics_text(text):
+        if not text:
+            return ""
+        # Zamiana znaków ucieczki bez ponownego kodowania UTF-8
+        t = text.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"').replace("\\\\", "\\")
+        return t.strip()
+
     lyrics = ""
     prompt_match = re.search(r":T[0-9a-f]+,(.+?)(?=\d+:\[|\d+:\"|\d+:\{|\d+:null|\Z)", html, re.DOTALL)
     if prompt_match:
         raw_text = prompt_match.group(1).strip()
         if any(marker in raw_text for marker in ["[Verse", "[Chorus", "[Intro", "[Outro", "[Bridge", "[Immediate"]):
-            try:
-                lyrics = raw_text.encode().decode("unicode_escape", errors="ignore").strip()
-            except Exception:
-                lyrics = raw_text
+            lyrics = clean_lyrics_text(raw_text)
             
     if not lyrics:
         prompt_m = re.search(r"\\\"prompt\\\":\\\"(.*?)\\\"", html)
         if prompt_m:
-            try:
-                lyrics = prompt_m.group(1).encode().decode("unicode_escape", errors="ignore").strip()
-            except Exception:
-                lyrics = prompt_m.group(1)
+            lyrics = clean_lyrics_text(prompt_m.group(1))
 
     result = {
         "success": True,
