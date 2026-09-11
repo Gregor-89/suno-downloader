@@ -1,6 +1,6 @@
 /**
  * Suno Downloader - Frontend Logic
- * Wsparcie dla pracy lokalnej oraz statycznej na GitHub Pages
+ * Wsparcie dla pracy lokalnej (z deszyfrowaniem Mango DRM) oraz podglądu online
  */
 
 const LOCAL_SERVER_PORT = 8989;
@@ -17,8 +17,10 @@ const btnPaste = document.getElementById('btnPaste');
 const btnSubmit = document.getElementById('btnSubmit');
 const loadingBox = document.getElementById('loadingBox');
 const trackCard = document.getElementById('trackCard');
+const modeNotice = document.getElementById('modeNotice');
+const modeNoticeText = document.getElementById('modeNoticeText');
 
-// Elementy karty utworu
+// Karta utworu
 const trackCover = document.getElementById('trackCover');
 const btnCoverDl = document.getElementById('btnCoverDl');
 const trackTitle = document.getElementById('trackTitle');
@@ -28,7 +30,7 @@ const trackBadgeModel = document.getElementById('trackBadgeModel');
 const trackBadgeArtist = document.getElementById('trackBadgeArtist');
 const trackBadgeDuration = document.getElementById('trackBadgeDuration');
 
-// Elementy odtwarzacza
+// Odtwarzacz
 const audioElement = document.getElementById('audioElement');
 const btnPlayPause = document.getElementById('btnPlayPause');
 const playIcon = document.getElementById('playIcon');
@@ -49,7 +51,7 @@ const encodingStatusText = document.getElementById('encodingStatusText');
 const encodingPercent = document.getElementById('encodingPercent');
 const encodingBarFill = document.getElementById('encodingBarFill');
 
-// Tekst / Prompt
+// Tekst
 const lyricsAccordion = document.getElementById('lyricsAccordion');
 const lyricsHeader = document.getElementById('lyricsHeader');
 const lyricsContent = document.getElementById('lyricsContent');
@@ -61,11 +63,8 @@ const lyricsArrow = document.getElementById('lyricsArrow');
 const historySection = document.getElementById('historySection');
 const historyGrid = document.getElementById('historyGrid');
 const btnClearHistory = document.getElementById('btnClearHistory');
-
-// Toast
 const toastContainer = document.getElementById('toastContainer');
 
-// --- Inicjalizacja ---
 document.addEventListener('DOMContentLoaded', () => {
   checkServerConnection();
   loadHistory();
@@ -90,41 +89,41 @@ function showToast(message, type = 'info') {
   }, 4000);
 }
 
-// Sprawdź obecność lokalnego serwera companion
+// Sprawdź status serwera lokalnego
 async function checkServerConnection() {
-  const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? ''
-    : `http://localhost:${LOCAL_SERVER_PORT}`;
-
-  try {
-    const res = await fetch(`${host}/api/ping`, { method: 'GET', signal: AbortSignal.timeout(1500) });
-    if (res.ok) {
-      isLocalServer = true;
-      serverStatusPill.className = 'server-status-pill online';
-      statusText.textContent = 'Lokalny Silnik Aktywny';
-      serverStatusPill.title = 'Lokalny serwer asystujący odpowiada natychmiastowo na zapytania.';
-      return;
-    }
-  } catch (e) {
-    // Brak lokalnego serwera - tryb GitHub Pages
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalHost) {
+    try {
+      const res = await fetch('/api/ping');
+      if (res.ok) {
+        isLocalServer = true;
+        serverStatusPill.className = 'server-status-pill online';
+        statusText.textContent = 'Lokalny Silnik DRM (Aktywny)';
+        modeNotice.style.background = 'rgba(16, 185, 129, 0.1)';
+        modeNotice.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+        modeNoticeText.innerHTML = '🟢 <b>Tryb Lokalny Aktywny:</b> Pełne wsparcie dla deszyfrowania strumieni audio Suno Mango DRM, odsłuchiwania w przeglądarce i konwersji do MP3.';
+        return;
+      }
+    } catch (e) {}
   }
 
+  // Jeśli strona jest na GitHub Pages
   isLocalServer = false;
   serverStatusPill.className = 'server-status-pill offline';
-  statusText.textContent = 'Tryb Web / GitHub Pages';
-  serverStatusPill.title = 'Aplikacja działa bezpośrednio w przeglądarce.';
+  statusText.textContent = 'Tryb Online (Podgląd)';
+  modeNotice.style.background = 'rgba(245, 158, 11, 0.1)';
+  modeNotice.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+  modeNoticeText.innerHTML = '⚠️ <b>Uwaga:</b> Suno wprowadziło szyfrowanie strumieni Mango DRM (AES-CTR). Aby bez problemu odsłuchiwać i pobierać pełne pliki audio MP3/M4A, <b>uruchom skrót Suno Downloader na Pulpicie</b> (<a href="http://localhost:8989" style="color:#f59e0b; text-decoration:underline;">http://localhost:8989</a>). Wersja GitHub Pages pozwala na pobieranie okładek i przeglądanie metadanych.';
 }
 
-// Konfiguracja zdarzeń
 function setupEventListeners() {
-  // Wyszukiwanie
   searchForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const val = urlInput.value.trim();
     if (val) processUrl(val);
   });
 
-  // Wklejanie
   btnPaste.addEventListener('click', async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -137,7 +136,6 @@ function setupEventListeners() {
     }
   });
 
-  // Test chips
   document.querySelectorAll('.chip-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const url = btn.dataset.url;
@@ -146,7 +144,7 @@ function setupEventListeners() {
     });
   });
 
-  // Odtwarzacz
+  // Player
   btnPlayPause.addEventListener('click', togglePlay);
   audioElement.addEventListener('timeupdate', updateProgress);
   audioElement.addEventListener('loadedmetadata', () => {
@@ -157,11 +155,19 @@ function setupEventListeners() {
     playIcon.style.display = 'block';
     pauseIcon.style.display = 'none';
   });
+  audioElement.addEventListener('error', (e) => {
+    console.warn('Audio element error:', audioElement.error);
+    if (!isLocalServer) {
+      showToast('Suno zaszyfrowało ten strumień audio. Uruchom serwer ze skrótu na Pulpicie (http://localhost:8989), aby go odsłuchać!', 'warn');
+    }
+  });
 
   progressBarContainer.addEventListener('click', (e) => {
     const rect = progressBarContainer.getBoundingClientRect();
     const pos = (e.clientX - rect.left) / rect.width;
-    audioElement.currentTime = pos * audioElement.duration;
+    if (audioElement.duration) {
+      audioElement.currentTime = pos * audioElement.duration;
+    }
   });
 
   volumeSlider.addEventListener('input', (e) => {
@@ -193,7 +199,6 @@ function setupEventListeners() {
     }
   });
 
-  // Wyczyść historię
   btnClearHistory.addEventListener('click', () => {
     localStorage.removeItem('suno_dl_history');
     historyItems = [];
@@ -202,7 +207,7 @@ function setupEventListeners() {
   });
 }
 
-// Główna funkcja przetwarzania adresu URL
+// Przetwarzanie adresu
 async function processUrl(input) {
   loadingBox.style.display = 'block';
   trackCard.style.display = 'none';
@@ -211,13 +216,8 @@ async function processUrl(input) {
   try {
     let track = null;
 
-    // 1. Jeśli działa lokalny serwer companion, zapytaj go bezpośrednio
     if (isLocalServer) {
-      const host = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? ''
-        : `http://localhost:${LOCAL_SERVER_PORT}`;
-      
-      const resp = await fetch(`${host}/api/resolve?url=${encodeURIComponent(input)}`);
+      const resp = await fetch(`/api/resolve?url=${encodeURIComponent(input)}`);
       const data = await resp.json();
       if (data.success) {
         track = data;
@@ -225,7 +225,6 @@ async function processUrl(input) {
         throw new Error(data.error || 'Błąd serwera lokalnego');
       }
     } else {
-      // 2. Tryb Web / GitHub Pages
       track = await resolveInWebMode(input);
     }
 
@@ -236,7 +235,7 @@ async function processUrl(input) {
     currentTrack = track;
     displayTrack(track);
     saveToHistory(track);
-    showToast(`Znaleziono utwór: "${track.title}"!`);
+    showToast(`Wczytano: "${track.title}"!`);
 
   } catch (err) {
     console.error(err);
@@ -247,11 +246,9 @@ async function processUrl(input) {
   }
 }
 
-// Rozwiązanie linku w trybie czysto przeglądarkowym (GitHub Pages)
+// Tryb Web (GitHub Pages)
 async function resolveInWebMode(input) {
   const trimmed = input.trim();
-  
-  // Czy podano bezpośrednio UUID lub link /song/UUID?
   const uuidMatch = trimmed.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
   
   if (uuidMatch && !trimmed.includes('/s/')) {
@@ -259,7 +256,7 @@ async function resolveInWebMode(input) {
     return {
       uuid: uuid,
       title: `Suno Track (${uuid.substring(0, 8)})`,
-      artist: 'Suno AI',
+      artist: 'Suno Creator',
       audio_url: `https://d2lwuy8qc234o3.cloudfront.net/1/clip/${uuid}.m4a`,
       image_url: `https://cdn2.suno.ai/image_large_${uuid}.jpeg`,
       tags: 'Generowane przez Suno AI',
@@ -267,10 +264,7 @@ async function resolveInWebMode(input) {
     };
   }
 
-  // Jeśli to link skrócony /s/...
-  // Próbujemy rozwiązać go poprzez Microlink API (darmowe, z włączonym CORS i podążaniem za przekierowaniami)
   showToast('Rozwiązywanie skróconego linku...');
-  
   try {
     const mlUrl = `https://api.microlink.io/?url=${encodeURIComponent(trimmed)}`;
     const res = await fetch(mlUrl, { signal: AbortSignal.timeout(8000) });
@@ -293,27 +287,21 @@ async function resolveInWebMode(input) {
         };
       }
     }
-  } catch (proxyErr) {
-    console.warn('Microlink proxy error:', proxyErr);
-  }
+  } catch (e) {}
 
-  // Jeśli zewnętrzne proxy nie zadziałało:
-  throw new Error('Link /s/ wymaga rozwinięcia. Otwórz ten link w nowej karcie przeglądarki, skopiuj z paska adresu pełny link /song/UUID i wklej go tutaj!');
+  throw new Error('Otwórz ten link w nowej karcie, skopiuj z paska adresu pełny link /song/UUID i wklej go tutaj!');
 }
 
-// Wyświetlenie danych utworu
 function displayTrack(track) {
   trackTitle.textContent = track.title || 'Nieznany utwór';
   trackArtist.textContent = `Autor / Twórca: ${track.artist || 'Suno AI'}`;
   trackBadgeArtist.textContent = track.artist || 'Suno Creator';
 
-  // Okładka
   trackCover.src = track.image_url || `https://cdn2.suno.ai/image_large_${track.uuid}.jpeg`;
   trackCover.onerror = () => {
     trackCover.src = `https://cdn2.suno.ai/image_${track.uuid}.jpeg`;
   };
 
-  // Tagi
   if (track.tags && track.tags.trim()) {
     trackTags.style.display = 'block';
     trackTags.textContent = `Styl / Tagi: ${track.tags}`;
@@ -321,7 +309,6 @@ function displayTrack(track) {
     trackTags.style.display = 'none';
   }
 
-  // Tekst
   if (track.lyrics && track.lyrics.trim()) {
     lyricsAccordion.style.display = 'block';
     lyricsText.textContent = track.lyrics;
@@ -331,8 +318,9 @@ function displayTrack(track) {
     lyricsAccordion.style.display = 'none';
   }
 
-  // Konfiguracja odtwarzacza audio
-  audioElement.src = track.audio_url;
+  // Ustawienie źródła audio
+  const audioSource = isLocalServer ? `/api/stream?uuid=${track.uuid}` : track.audio_url;
+  audioElement.src = audioSource;
   audioElement.load();
   playIcon.style.display = 'block';
   pauseIcon.style.display = 'none';
@@ -343,12 +331,17 @@ function displayTrack(track) {
   trackCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-// Odtwarzanie audio
 function togglePlay() {
   if (audioElement.paused) {
-    audioElement.play();
-    playIcon.style.display = 'none';
-    pauseIcon.style.display = 'block';
+    audioElement.play().then(() => {
+      playIcon.style.display = 'none';
+      pauseIcon.style.display = 'block';
+    }).catch((err) => {
+      console.warn('Play error:', err);
+      if (!isLocalServer) {
+        showToast('Nowe pliki Suno są szyfrowane (Mango DRM). Uruchom lokalny skrót na Pulpicie (http://localhost:8989), aby odsłuchiwać!', 'warn');
+      }
+    });
   } else {
     audioElement.pause();
     playIcon.style.display = 'block';
@@ -371,30 +364,28 @@ function formatTime(sec) {
   return `${mins}:${rem < 10 ? '0' : ''}${rem}`;
 }
 
-// Pobieranie oryginalnego pliku M4A
+// Pobieranie oryginalnego M4A
 async function downloadOriginalM4a() {
   if (!currentTrack) return;
-  showToast('Pobieranie oryginalnego strumienia M4A...');
-
-  try {
-    const filename = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.m4a`);
-    const res = await fetch(currentTrack.audio_url);
-    const blob = await res.blob();
-    triggerDownload(blob, filename);
-    showToast('Pobrano M4A!');
-  } catch (err) {
-    // Fallback: bezpośredni link
-    const a = document.createElement('a');
-    a.href = currentTrack.audio_url;
-    a.download = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.m4a`);
-    a.target = '_blank';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  
+  if (isLocalServer) {
+    // Bezpośrednie pobranie odszyfrowanego pliku z serwera lokalnego
+    window.location.href = `/api/download?uuid=${currentTrack.uuid}`;
+    showToast('Pobieranie odszyfrowanego strumienia M4A...');
+    return;
   }
+
+  showToast('Uwaga: pobierany plik może wymagać lokalnego odszyfrowania ze względu na Suno DRM.');
+  const a = document.createElement('a');
+  a.href = currentTrack.audio_url;
+  a.download = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.m4a`);
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
-// Pobieranie okładki w wysokiej rozdzielczości
+// Pobieranie okładki HD
 async function downloadCoverArt() {
   if (!currentTrack) return;
   showToast('Pobieranie okładki HD...');
@@ -410,24 +401,28 @@ async function downloadCoverArt() {
   }
 }
 
-// Konwersja M4A do MP3 z tagami ID3 i okładką
+// Konwersja do MP3 z ID3
 async function downloadAsMp3() {
   if (!currentTrack) return;
 
+  if (!isLocalServer) {
+    showToast('Suno zaszyfrowało strumienie (Mango DRM). Aby wygenerować MP3, uruchom program ze skrótu na Pulpicie (http://localhost:8989)!', 'warn');
+    return;
+  }
+
   btnDownloadMp3.disabled = true;
   encodingProgressBox.style.display = 'block';
-  setEncodingProgress(5, 'Pobieranie strumienia audio...');
+  setEncodingProgress(5, 'Pobieranie odszyfrowanego strumienia audio...');
 
   try {
-    // 1. Pobierz plik M4A jako ArrayBuffer
-    const audioResp = await fetch(currentTrack.audio_url);
+    const audioUrl = `/api/stream?uuid=${currentTrack.uuid}`;
+    const audioResp = await fetch(audioUrl);
     const audioArrayBuffer = await audioResp.arrayBuffer();
 
     setEncodingProgress(25, 'Dekodowanie strumienia do PCM...');
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const audioBuffer = await audioCtx.decodeAudioData(audioArrayBuffer);
 
-    // 2. Przygotuj kanały PCM
     setEncodingProgress(40, 'Inicjalizacja kodera LAME MP3...');
     const numChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
@@ -444,7 +439,6 @@ async function downloadAsMp3() {
       rightInt16[i] = Math.max(-32768, Math.min(32767, right[i] * 32767.5));
     }
 
-    // 3. Kodowanie LAME MP3 (320kbps)
     setEncodingProgress(50, 'Kodowanie do formatu MP3 (320 kbps)...');
     const mp3encoder = new lamejs.Mp3Encoder(numChannels > 1 ? 2 : 1, sampleRate, 320);
     const mp3Chunks = [];
@@ -463,7 +457,6 @@ async function downloadAsMp3() {
         mp3Chunks.push(mp3buf);
       }
 
-      // Aktualizacja paska postępu
       if (i % (sampleBlockSize * 40) === 0) {
         const pct = 50 + Math.round((i / length) * 35);
         setEncodingProgress(pct, `Kodowanie: ${pct}%`);
@@ -476,7 +469,6 @@ async function downloadAsMp3() {
       mp3Chunks.push(endBuf);
     }
 
-    // Łączenie buforów MP3
     let totalLen = 0;
     for (const c of mp3Chunks) totalLen += c.length;
     const fullMp3 = new Uint8Array(totalLen);
@@ -486,7 +478,6 @@ async function downloadAsMp3() {
       offset += c.length;
     }
 
-    // 4. Pobierz okładkę jako ArrayBuffer dla tagów ID3
     setEncodingProgress(90, 'Zapisywanie metadanych ID3 i okładki...');
     let coverArrayBuffer = null;
     try {
@@ -494,11 +485,8 @@ async function downloadAsMp3() {
       if (coverRes.ok) {
         coverArrayBuffer = await coverRes.arrayBuffer();
       }
-    } catch (e) {
-      console.warn('Nie udało się pobrać okładki dla tagu ID3:', e);
-    }
+    } catch (e) {}
 
-    // 5. Zapis tagów ID3
     let finalBlob;
     if (window.ID3Writer) {
       try {
@@ -526,7 +514,6 @@ async function downloadAsMp3() {
         writer.addTag();
         finalBlob = writer.getBlob();
       } catch (id3Err) {
-        console.warn('Błąd ID3Writer, zwracam czyste MP3:', id3Err);
         finalBlob = new Blob([fullMp3], { type: 'audio/mpeg' });
       }
     } else {
@@ -536,7 +523,7 @@ async function downloadAsMp3() {
     setEncodingProgress(100, 'Gotowe!');
     const filename = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.mp3`);
     triggerDownload(finalBlob, filename);
-    showToast('Pomyślnie wygenerowano plik MP3 z okładką!');
+    showToast('Pomyślnie pobrano plik MP3 z okładką!');
 
   } catch (err) {
     console.error('Błąd kodowania MP3:', err);
@@ -555,12 +542,10 @@ function setEncodingProgress(percent, status) {
   encodingBarFill.style.width = `${percent}%`;
 }
 
-// Bezpieczna nazwa pliku
 function sanitizeFilename(name) {
   return name.replace(/[/\\?%*:|"<>]/g, '_').trim();
 }
 
-// Wywołanie pobierania w przeglądarce
 function triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -574,11 +559,9 @@ function triggerDownload(blob, filename) {
   }, 100);
 }
 
-// Obsługa historii w localStorage
 function saveToHistory(track) {
   try {
     const list = JSON.parse(localStorage.getItem('suno_dl_history') || '[]');
-    // Usuń duplikaty
     const filtered = list.filter((item) => item.uuid !== track.uuid);
     filtered.unshift({
       uuid: track.uuid,
@@ -590,13 +573,10 @@ function saveToHistory(track) {
       lyrics: track.lyrics,
       date: new Date().toISOString()
     });
-    // Zostaw maksymalnie 12 utworów
     const limited = filtered.slice(0, 12);
     localStorage.setItem('suno_dl_history', JSON.stringify(limited));
     loadHistory();
-  } catch (e) {
-    console.warn('Błąd zapisu historii:', e);
-  }
+  } catch (e) {}
 }
 
 function loadHistory() {
