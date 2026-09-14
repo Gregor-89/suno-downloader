@@ -400,9 +400,8 @@ async function downloadOriginalM4a() {
   }
 
   showToast('Uwaga: pobierany plik może wymagać lokalnego odszyfrowania ze względu na Suno DRM.');
-  const a = document.createElement('a');
-  a.href = currentTrack.audio_url;
-  a.download = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.m4a`);
+  const trackTitle = (currentTrack.title && currentTrack.title.trim()) || (currentTrack.id ? `suno_${currentTrack.id.slice(0, 8)}` : 'utwor');
+  a.download = sanitizeFilename(`${trackTitle}.m4a`);
   a.target = '_blank';
   document.body.appendChild(a);
   a.click();
@@ -415,7 +414,8 @@ async function downloadCoverArt() {
   showToast('Pobieranie okładki HD...');
 
   try {
-    const filename = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title} (Cover).jpeg`);
+    const trackTitle = (currentTrack.title && currentTrack.title.trim()) || (currentTrack.id ? `suno_${currentTrack.id.slice(0, 8)}` : 'utwor');
+    const filename = sanitizeFilename(`${trackTitle} (Cover).jpeg`);
     const res = await fetch(currentTrack.image_url);
     const blob = await res.blob();
     triggerDownload(blob, filename);
@@ -546,7 +546,8 @@ async function downloadAsMp3() {
     }
 
     setEncodingProgress(100, 'Gotowe!');
-    const filename = sanitizeFilename(`${currentTrack.artist} - ${currentTrack.title}.mp3`);
+    const trackTitle = (currentTrack.title && currentTrack.title.trim()) || (currentTrack.id ? `suno_${currentTrack.id.slice(0, 8)}` : 'utwor');
+    const filename = sanitizeFilename(`${trackTitle}.mp3`);
     triggerDownload(finalBlob, filename);
     showToast('Pomyślnie pobrano plik MP3 z okładką!');
 

@@ -79,8 +79,7 @@ class handler(BaseHTTPRequestHandler):
 
             meta = metadata_cache.get(uuid, {})
             title = meta.get("title", f"suno_{uuid[:8]}")
-            artist = meta.get("artist", "Suno AI")
-            safe_filename = re.sub(r'[/\\?%*:|"<> ]', '_', f"{artist}_{title}.m4a")
+            safe_filename = re.sub(r'[/\\?%*:|"<> ]', '_', f"{title}.m4a")
 
             if parsed.path.endswith("/api/download"):
                 self.send_response(200)
